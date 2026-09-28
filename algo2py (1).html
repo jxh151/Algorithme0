@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="fr" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>De l'algorithme à Python</title>
+<style>
+  :root { --bg:#eef2f7; --ink:#14213d; --accent:#2a6f97; --btn:#fff; --panel:#14213d; --code:#e8eef7; --field:#fff; --line:#b8c4d6; --bad:#a4161a;
+    box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px); }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#0f1626; --ink:#e6ecf5; --accent:#6fb1d8; --btn:#0f1626; --panel:#0a101d; --field:#1a2438; --line:#34425c; --bad:#ff8a8f; } }
+  :root[data-theme="dark"] { --bg:#0f1626; --ink:#e6ecf5; --accent:#6fb1d8; --btn:#0f1626; --panel:#0a101d; --field:#1a2438; --line:#34425c; --bad:#ff8a8f; }
+  html { scroll-padding-top:env(safe-area-inset-top,0px); }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font-family:Tahoma,"Segoe UI",system-ui,sans-serif; line-height:1.6; }
+  main { max-width:1000px; margin:0 auto; padding:32px 18px; }
+  h1 { font-size:2rem; margin:0 0 6px; }
+  .lead { margin:0 0 24px; max-width:60ch; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+  @media (max-width:760px) { .grid { grid-template-columns:1fr; } }
+  label { display:block; font-weight:700; margin-bottom:8px; }
+  textarea, pre { direction:ltr; text-align:left; width:100%; min-height:340px; margin:0; padding:14px; border-radius:6px; font:0.95rem Consolas,"Courier New",monospace; }
+  textarea { border:2px solid var(--line); background:var(--field); color:var(--ink); resize:vertical; }
+  pre { background:var(--panel); color:var(--code); overflow-x:auto; white-space:pre; }
+  textarea:focus, button:focus-visible { outline:3px solid var(--accent); outline-offset:2px; }
+  .row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-top:14px; }
+  button { background:var(--accent); color:var(--btn); border:0; border-radius:6px; padding:10px 20px; font:inherit; font-weight:700; cursor:pointer; }
+  #warn { color:var(--bad); font-weight:700; }
+  .hint { margin-top:22px; font-size:0.9rem; opacity:0.85; direction:ltr; text-align:left; }
+</style>
+</head>
+<body>
+<main>
+  <h1>De l'algorithme à Python</h1>
+  <p class="lead">Écris ton algorithme comme en classe : le code Python apparaît tout de suite. Copie-le et exécute-le dans Thonny.</p>
+  <div class="grid">
+    <div><label for="algo">Algorithme</label>
+<textarea id="algo" spellcheck="false">Algorithme Produit
+Début
+1) Ecrire("g=")
+2) Lire(g)
+3) Ecrire("f=")
+4) Lire(f)
+5) h <- g * f
+6) Ecrire("h=", h)
+Fin
+
+T.D.O
+Objet | Type/Nature
+g, f, h | Entier</textarea></div>
+    <div><label for="out">Code Python</label><pre id="out"></pre></div>
+  </div>
+  <div class="row"><button id="copy">Copier le code</button><span id="warn" role="alert"></span></div>
+  <p class="hint">Algorithme, Début, Fin, Ecrire, Lire, &lt;-, Si / Sinon si / Sinon / Fin Si, Pour ... de ... à ... Faire / Fin Pour, Tant que ... Faire / Fin Tant que, Répéter ... Jusqu'à, DIV, MOD, ET, OU, NON, Racine_carree, Ent, T.D.O (Objet | Type/Nature)</p>
+</main>
+<script>
+const strip = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[’‘`´]/g,"'");
+function convert(src){
+  const out=[], warn=[], types={}; let lvl=0, opened=false, useMath=false, useLire=false;
+  const emit=(t,l=lvl)=>{ out.push('    '.repeat(l)+t); opened=false; };
+  const open=t=>{ emit(t); lvl++; opened=true; };
+  const close=()=>{ if(opened) emit('pass'); lvl=Math.max(0,lvl-1); };
+  const decl=t=>{
+    if(/^t\.?d\.?o\b/i.test(t)) return true;
+    let m, names, ty;
+    if(/[|\t]/.test(t)){ const c=t.split(/\s*[|\t]\s*/).filter(Boolean);
+      if(/^objet/i.test(c[0])||!c[1]) return true;
+      names=c[0]; ty=c[1]; }
+    else if(m=t.match(/^([a-z_]\w*(?:\s*,\s*[a-z_]\w*)*)\s*:\s*(\w+)/i)){ names=m[1]; ty=m[2]; }
+    else return false;
+    const k=ty.toLowerCase().match(/entier|reel|chaine|caractere|booleen/);
+    if(k) names.split(',').forEach(v=>types[v.trim()]=k[0]);
+    return true;
+  };
+  src.split('\n').forEach(raw=>decl(strip(raw.replace(/"[^"]*"|“[^”]*”/g,'')).replace(/^\s*\d+\s*[).\-]?\s*/,'').trim()));
+  src.split('\n').forEach((raw,i)=>{
+    const strs=[];
+    let t=raw.replace(/"[^"]*"|“[^”]*”/g,m=>{ strs.push(m.replace(/^“|”$/g,'"')); return '§'+(strs.length-1)+'§'; });
+    t=strip(t).replace(/^\s*\d+\s*[).\-]?\s*/,'').trim();
+    if(!t||decl(t)) return;
+    const back=s=>s.replace(/§(\d+)§/g,(_,n)=>strs[n]);
+    const ex=(s,cond)=>{
+      s=s.replace(/<>/g,'!=').replace(/\bdiv\b/gi,'//').replace(/\bmod\b/gi,'%').replace(/\bet\b/gi,'and').replace(/\bou\b/gi,'or').replace(/\bnon\b/gi,'not')
+         .replace(/\bvrai\b/gi,'True').replace(/\bfaux\b/gi,'False').replace(/\^/g,'**')
+         .replace(/\bracine_carree\s*\(/gi,()=>{ useMath=true; return 'math.sqrt('; }).replace(/\bent\s*\(/gi,'int(');
+      if(cond) s=s.replace(/(?<![<>!=])=(?!=)/g,'==');
+      return back(s);
+    };
+    let m;
+    if(/^(debut|fin)$/i.test(t)) return;
+    if(m=t.match(/^algorithme\b\s*(.*)$/i)) return emit('# Algorithme '+m[1]);
+    if(m=t.match(/^ecrire\s*\((.*)\)$/i)) return emit('print('+ex(m[1])+')');
+    if(m=t.match(/^lire\s*\((.*)\)$/i)){
+      m[1].split(',').forEach(v=>{ v=v.trim(); const ty=types[v];
+        if(ty==='entier') emit(v+' = int(input())'); else if(ty==='reel') emit(v+' = float(input())');
+        else if(ty==='chaine'||ty==='caractere') emit(v+' = input()'); else { useLire=true; emit(v+' = lire()'); } });
+      return;
+    }
+    if(m=t.match(/^sinon\s+si\s+(.+?)\s+alors$/i)){ close(); return open('elif '+ex(m[1],1)+':'); }
+    if(/^sinon$/i.test(t)){ close(); return open('else:'); }
+    if(m=t.match(/^si\s+(.+?)\s+alors$/i)) return open('if '+ex(m[1],1)+':');
+    if(/^fin\s*(si|pour|tant\s*que)$/i.test(t)) return close();
+    if(m=t.match(/^pour\s+(\w+)\s*(?:de|=|<-+)\s*(.+?)\s+a\s+(.+?)\s+faire$/i)) return open('for '+m[1]+' in range('+ex(m[2])+', '+ex(m[3])+' + 1):');
+    if(m=t.match(/^tant\s+que\s+(.+?)\s+faire$/i)) return open('while '+ex(m[1],1)+':');
+    if(/^repeter$/i.test(t)) return open('while True:');
+    if(m=t.match(/^jusqu'?a\s+(.+)$/i)){ emit('if '+ex(m[1],1)+':'); emit('break',lvl+1); lvl=Math.max(0,lvl-1); return; }
+    if(m=t.match(/^(.+?)\s*(?:<-+|←)\s*(.+)$/)) return emit(back(m[1].trim())+' = '+ex(m[2]));
+    warn.push(i+1); emit('# ??? '+back(t));
+  });
+  const head=[];
+  if(useMath) head.push('import math');
+  if(useLire) head.push('def lire():\n    v = input()\n    try:\n        return int(v)\n    except ValueError:\n        try:\n            return float(v)\n        except ValueError:\n            return v');
+  return { code:(head.length?head.join('\n')+'\n\n':'')+out.join('\n'), warn };
+}
+const algo=document.getElementById('algo'), out=document.getElementById('out'), warn=document.getElementById('warn'), copy=document.getElementById('copy');
+function update(){ const r=convert(algo.value); out.textContent=r.code; warn.textContent=r.warn.length?'Lignes non comprises : '+r.warn.join(', ')+' (vérifie l\'écriture)':''; }
+algo.addEventListener('input',update); update();
+copy.addEventListener('click',async()=>{ try{ await navigator.clipboard.writeText(out.textContent); copy.textContent='Copié !'; setTimeout(()=>copy.textContent='Copier le code',1500); }catch(e){ warn.textContent='Sélectionne le code et copie-le à la main.'; } });
+</script>
+</body>
+</html>
